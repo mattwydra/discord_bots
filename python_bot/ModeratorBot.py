@@ -60,4 +60,4 @@ async def unban(ctx, *, member):
 # async def test(ctx):
 #     await ctx.send('You can manage messages.')
 
-client.run('Nzc5ODg2Mjg4NzA2NDY5ODk4.X7nDtA.nFJVQsZ6cVZzgJwwPByRK-Vfh5Y')
+client.run('TOKEN')

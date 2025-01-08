@@ -65,4 +65,4 @@ async def getReplays(ctx, platform, player):
                    'upload-after=' + uploadBefore + '&' +
                    'upload-before=' + uploadAfter + '&')
 
-client.run('Nzc5ODY0MTUzMTg3NjgwMjY3.X7mvFw.thfsHBohuOtcsYReJAX3nyvTXyQ')
+client.run('TOKEN')

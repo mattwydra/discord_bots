@@ -138,4 +138,4 @@ async def fus(ctx):
 # async def prefix(ctx, newCommand):
 #     client = commands.Bot(command_prefix = newCommand)
 
-client.run('Nzc4NDI5ODUyMzk4MTI1MDc2.X7R3Sw.7egXP6kh1gxM1s5SbOjf4x5ESnI')
+client.run('TOKEN')
