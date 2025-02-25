@@ -1,6 +1,6 @@
 # Bot Collection
 
-Welcome to the **Bot Collection** repository! This project hosts a variety of Discord bots aimed at enhancing user experience with a range of features, from productivity to motivation and self-improvement. Below you’ll find a list of the bots in development, their current statuses, and links to detailed feature plans.
+Welcome to the **Bot Collection** repository! This project houses the code for a variety of Discord bots aimed at enhancing user experience with a range of features, from productivity to motivation and self-improvement. Below you’ll find a list of the bots in development, their current statuses, and links to detailed feature plans.
 
 ---
 
