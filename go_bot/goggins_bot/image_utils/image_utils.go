@@ -152,10 +152,6 @@ func loadAndResizeImage(filePath string, width, height int) image.Image {
 	newWidth := int(float64(imgWidth) * scale)
 	newHeight := int(float64(imgHeight) * scale)
 
-	// Calculate positioning to center the image
-	x := (width - newWidth) / 2
-	y := (height - newHeight) / 2
-
 	// Draw black background
 	dc.SetRGB(0, 0, 0)
 	dc.Clear()

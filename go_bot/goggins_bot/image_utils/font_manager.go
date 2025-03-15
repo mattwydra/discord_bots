@@ -93,7 +93,8 @@ func LoadFont(dc *gg.Context, fontName string, size float64) error {
 	}
 
 	// Set default font as last resort
-	dc.SetFontFace(gg.NewFace(gg.NewDefaultFontFace(), size))
+	// Fix: Using built-in gg method to set default font face
+	dc.SetFontFace(gg.NewFontFace(gg.GetDefaultFont(), size))
 	return nil
 }
 
