@@ -1,20 +1,16 @@
 package main
 
 import (
-	// "encoding/json"
 	"encoding/json"
 	"fmt"
-
-	// "io/ioutil"
 	"log"
-
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"goggins-bot/image_utils"
-
-	// "time"
 
 	"github.com/bwmarrin/discordgo"
 )
@@ -39,15 +35,25 @@ func getRandomImages(imageDir string, count int) []string {
 		log.Fatalf("Error reading image directory: %v", err)
 	}
 
-	if len(files) < count {
+	var imageFiles []os.DirEntry
+	for _, file := range files {
+		if !file.IsDir() {
+			ext := strings.ToLower(filepath.Ext(file.Name()))
+			if ext == ".jpg" || ext == ".jpeg" || ext == ".png" {
+				imageFiles = append(imageFiles, file)
+			}
+		}
+	}
+
+	if len(imageFiles) < count {
 		log.Fatalf("Not enough images in the directory to pick %d images.", count)
 	}
 
-	rand.Shuffle(len(files), func(i, j int) { files[i], files[j] = files[j], files[i] })
+	rand.Shuffle(len(imageFiles), func(i, j int) { imageFiles[i], imageFiles[j] = imageFiles[j], imageFiles[i] })
 
 	var images []string
 	for i := 0; i < count; i++ {
-		images = append(images, fmt.Sprintf("%s/%s", imageDir, files[i].Name()))
+		images = append(images, fmt.Sprintf("%s/%s", imageDir, imageFiles[i].Name()))
 	}
 	return images
 }
@@ -57,12 +63,9 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
-	// Example: Respond to a specific command
-	if m.Content == "!ping" {
-		s.ChannelMessageSend(m.ChannelID, "Pong!")
-	}
-
 	switch m.Content {
+	case "!ping":
+		s.ChannelMessageSend(m.ChannelID, "Pong!")
 	case "!quote":
 		quote := getRandomQuote()
 		s.ChannelMessageSend(m.ChannelID, quote)
@@ -71,20 +74,21 @@ func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 		images := getRandomImages("assets/images", 1)
 		filePath := image_utils.GenerateSingleImageWithQuote(images[0], quote)
 		sendImage(s, m.ChannelID, filePath)
-	// case "!single":
-	// 	quote := getRandomQuote()
-	// 	images := getRandomImages("assets/images", 1)
-	// 	filePath := generateSingleImageWithQuote(images[0], quote)
-	// 	sendImage(s, m.ChannelID, filePath)
-
 	case "!window":
 		quote := getRandomQuote()
 		images := getRandomImages("assets/images", 4)
 		filePath := image_utils.GenerateWindowImageWithQuote(images, quote)
 		sendImage(s, m.ChannelID, filePath)
-
+	case "!help":
+		helpMsg := "**Goggins Bot Commands:**\n" +
+			"- `!quote` - Get a random motivational quote\n" +
+			"- `!single` - Generate a single image with a quote\n" +
+			"- `!window` - Generate a 2x2 grid of images with a quote\n" +
+			"- `!ping` - Check if the bot is running"
+		s.ChannelMessageSend(m.ChannelID, helpMsg)
 	default:
-		s.ChannelMessageSend(m.ChannelID, "Get back to work. Try !quote, !single, or !window.")
+		// Either do nothing or respond with help message
+		// s.ChannelMessageSend(m.ChannelID, "Unknown command. Try !help for available commands.")
 	}
 }
 
@@ -100,7 +104,9 @@ func sendImage(s *discordgo.Session, channelID, filePath string) {
 }
 
 func main() {
-	// Replace with your bot token
+	// Seed the random number generator
+	rand.Seed(time.Now().UnixNano())
+
 	// Load config
 	config := struct {
 		Token string `json:"token"`
@@ -137,18 +143,6 @@ func main() {
 		log.Fatalf("Error opening Discord session: %v", err)
 	}
 
-	fmt.Println("Bot is running. Press Ctrl+C to exit.")
+	fmt.Println("Goggins Bot is running. Press Ctrl+C to exit.")
 	select {}
 }
-
-// func messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
-// 	// Ignore bot's own messages
-// 	if m.Author.ID == s.State.User.ID {
-// 		return
-// 	}
-
-// 	// Example: Respond to a specific command
-// 	if m.Content == "!ping" {
-// 		s.ChannelMessageSend(m.ChannelID, "Pong!")
-// 	}
-// }
