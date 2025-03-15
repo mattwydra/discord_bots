@@ -2,84 +2,209 @@ package image_utils
 
 import (
 	"image"
+	"image/color"
 	"image/draw"
 	"image/jpeg"
+	"image/png"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fogleman/gg"
+	"golang.org/x/image/font"
 )
 
+const (
+	// Standard dimensions for all images
+	StandardWidth  = 800
+	StandardHeight = 600
+	
+	// Text styling
+	FontSize     = 36
+	LineSpacing  = 1.5
+	MaxLineWidth = 30
+	
+	// Overlay styling
+	ShadowOffset = 2
+	TextPadding  = 20
+)
+
+// GenerateSingleImageWithQuote creates a motivational image with a quote overlay
 func GenerateSingleImageWithQuote(imagePath, quote string) string {
-	img := loadImage(imagePath)
-	outputPath := "output/single_quote.jpg"
+	// Load and resize image to standard dimensions
+	img := loadAndResizeImage(imagePath, StandardWidth, StandardHeight)
+	outputPath := "output/single_quote.png"
 
 	// Ensure the output directory exists
 	createOutputDir(outputPath)
 
+	// Create drawing context
 	dc := gg.NewContextForImage(img)
+	
+	// Add semi-transparent overlay for better text readability
+	dc.SetRGBA(0, 0, 0, 0.5)
+	dc.DrawRectangle(0, float64(dc.Height())/2-100, float64(dc.Width()), 200)
+	dc.Fill()
+	
+	// Set up text properties
 	dc.SetRGB(1, 1, 1)
-	// dc.SetFontSize(32) // You can experiment with this value to make the text larger
-	dc.DrawStringAnchored(quote, float64(dc.Width()/2), float64(dc.Height()/2), 0.5, 0.5)
+	if err := dc.LoadFontFace("assets/fonts/Impact.ttf", FontSize); err != nil {
+		// Fallback to default font
+		dc.SetFontFace(gg.NewFace(gg.NewDefaultFontFace(), FontSize))
+	}
+	
+	// Draw text with shadow for better readability
+	wrappedQuote := wrapText(quote, MaxLineWidth)
+	
+	// Draw text shadow
+	dc.SetRGB(0, 0, 0)
+	dc.DrawStringWrapped(wrappedQuote, float64(dc.Width()/2)+ShadowOffset, float64(dc.Height()/2)+ShadowOffset, 
+		0.5, 0.5, float64(dc.Width())-TextPadding*2, LineSpacing, gg.AlignCenter)
+	
+	// Draw main text
+	dc.SetRGB(1, 1, 1)
+	dc.DrawStringWrapped(wrappedQuote, float64(dc.Width()/2), float64(dc.Height()/2), 
+		0.5, 0.5, float64(dc.Width())-TextPadding*2, LineSpacing, gg.AlignCenter)
+	
 	dc.SavePNG(outputPath)
-	// dc.SetFontFace(24)
-
 	return outputPath
 }
 
+// GenerateWindowImageWithQuote creates a 2x2 grid of images with a quote
 func GenerateWindowImageWithQuote(imagePaths []string, quote string) string {
-	// Load images
-	img1 := loadImage(imagePaths[0])
-	img2 := loadImage(imagePaths[1])
-	img3 := loadImage(imagePaths[2])
-	img4 := loadImage(imagePaths[3])
-
-	// Create new canvas
-	width := img1.Bounds().Dx() * 2
-	height := img1.Bounds().Dy() * 2
+	// Standard dimensions for the grid
+	width := StandardWidth * 2
+	height := StandardHeight * 2
+	
+	// Create a new canvas
 	canvas := image.NewRGBA(image.Rect(0, 0, width, height))
-
-	// Draw images onto canvas
-	draw.Draw(canvas, image.Rect(0, 0, width/2, height/2), img1, image.Point{}, draw.Over)
-	draw.Draw(canvas, image.Rect(width/2, 0, width, height/2), img2, image.Point{}, draw.Over)
-	draw.Draw(canvas, image.Rect(0, height/2, width/2, height), img3, image.Point{}, draw.Over)
-	draw.Draw(canvas, image.Rect(width/2, height/2, width, height), img4, image.Point{}, draw.Over)
-
-	// Add quote to the center
+	
+	// Process and place each image
+	for i, path := range imagePaths[:4] {
+		// Determine position in grid
+		x := (i % 2) * StandardWidth
+		y := (i / 2) * StandardHeight
+		
+		// Load and resize image
+		img := loadAndResizeImage(path, StandardWidth, StandardHeight)
+		
+		// Draw to canvas
+		draw.Draw(canvas, image.Rect(x, y, x+StandardWidth, y+StandardHeight), 
+			img, image.Point{}, draw.Over)
+	}
+	
+	// Create drawing context for adding text
 	dc := gg.NewContextForImage(canvas)
+	
+	// Add semi-transparent overlay for text
+	dc.SetRGBA(0, 0, 0, 0.5)
+	dc.DrawRectangle(0, float64(height)/2-100, float64(width), 200)
+	dc.Fill()
+	
+	// Set up text properties
+	if err := dc.LoadFontFace("assets/fonts/Impact.ttf", FontSize*1.5); err != nil {
+		// Fallback to default font with increased size
+		dc.SetFontFace(gg.NewFace(gg.NewDefaultFontFace(), FontSize*1.5))
+	}
+	
+	// Wrap text to fit
+	wrappedQuote := wrapText(quote, MaxLineWidth)
+	
+	// Draw text shadow
+	dc.SetRGB(0, 0, 0)
+	dc.DrawStringWrapped(wrappedQuote, float64(width/2)+ShadowOffset, float64(height/2)+ShadowOffset, 
+		0.5, 0.5, float64(width)-TextPadding*4, LineSpacing, gg.AlignCenter)
+	
+	// Draw main text
 	dc.SetRGB(1, 1, 1)
-	dc.DrawStringAnchored(quote, float64(width/2), float64(height/2), 0.5, 0.5)
-
-	outputPath := "output/window_quote.jpg"
+	dc.DrawStringWrapped(wrappedQuote, float64(width/2), float64(height/2), 
+		0.5, 0.5, float64(width)-TextPadding*4, LineSpacing, gg.AlignCenter)
+	
+	outputPath := "output/window_quote.png"
 	createOutputDir(outputPath)
-	saveImage(outputPath, canvas)
-
+	dc.SavePNG(outputPath)
+	
 	return outputPath
 }
 
+// loadAndResizeImage loads an image and resizes it to the specified dimensions
+func loadAndResizeImage(filePath string, width, height int) image.Image {
+	file, err := os.Open(filePath)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	
+	img, _, err := image.Decode(file)
+	if err != nil {
+		panic(err)
+	}
+	
+	// Create a new context with the target dimensions
+	dc := gg.NewContext(width, height)
+	
+	// Draw the image with proper scaling
+	dc.DrawImage(img, 0, 0)
+	
+	return dc.Image()
+}
+
+// wrapText breaks text into appropriate line lengths
+func wrapText(text string, maxChars int) string {
+	words := strings.Fields(text)
+	var lines []string
+	currentLine := ""
+	
+	for _, word := range words {
+		// Check if adding this word would exceed max chars
+		if len(currentLine)+len(word)+1 > maxChars && len(currentLine) > 0 {
+			lines = append(lines, currentLine)
+			currentLine = word
+		} else if len(currentLine) == 0 {
+			currentLine = word
+		} else {
+			currentLine += " " + word
+		}
+	}
+	
+	// Add the final line
+	if len(currentLine) > 0 {
+		lines = append(lines, currentLine)
+	}
+	
+	return strings.Join(lines, "\n")
+}
+
+// loadImage loads an image from a file
 func loadImage(filePath string) image.Image {
 	file, err := os.Open(filePath)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-
+	
 	img, _, err := image.Decode(file)
 	if err != nil {
 		panic(err)
 	}
-
+	
 	return img
 }
 
+// saveImage saves an image to a file
 func saveImage(filePath string, img image.Image) {
 	file, err := os.Create(filePath)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
-
-	jpeg.Encode(file, img, nil)
+	
+	ext := strings.ToLower(filepath.Ext(filePath))
+	if ext == ".png" {
+		png.Encode(file, img)
+	} else {
+		jpeg.Encode(file, img, nil)
+	}
 }
 
 // createOutputDir ensures the directory for the file exists
