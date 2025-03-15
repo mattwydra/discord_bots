@@ -118,6 +118,12 @@ func main() {
 	// Load quotes
 	loadQuotes("assets/quotes.txt")
 
+	// Initialize fonts
+	if err := image_utils.InitializeFonts(); err != nil {
+		log.Printf("Warning: Failed to initialize fonts: %v", err)
+		log.Println("Continuing with default fonts...")
+	}
+
 	// Start bot
 	dg, err := discordgo.New("Bot " + config.Token)
 	if err != nil {
